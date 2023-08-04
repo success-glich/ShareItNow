@@ -3,6 +3,7 @@ import multer from "multer";
 const router = express.Router();
 import { UploadApiResponse, v2 as cloudinary } from "cloudinary";
 import File from "../models/File";
+import https from "https";
 const storage = multer.diskStorage({});
 let upload = multer({
   storage,
@@ -53,6 +54,48 @@ router.post("/upload", upload.single("myFile"), async (req, res) => {
       success: false,
       message: "Server Error :(",
     });
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(id);
+    const file = await File.findById(id);
+    if (!file) {
+      return res.status(404).json({
+        success: false,
+        message: "File does not exist !",
+      });
+    }
+    const { filename, sizeInBytes, format } = file;
+    return res.status(200).json({
+      success: true,
+      file: {
+        name: filename,
+        sizeInBytes,
+        format,
+        id,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Server Error :(" });
+  }
+});
+router.get("/:id/download", async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(id);
+    const file = await File.findById(id);
+    if (!file) {
+      return res.status(404).json({
+        success: false,
+        message: "File does not exist !",
+      });
+    }
+    https.get(file.secure_url, (fileStream) => fileStream.pipe(res));
+  } catch (err) {
+    return res.status(500).json({ message: "Server Error :(" });
   }
 });
 export default router;
